@@ -1,9 +1,9 @@
-// src/index.ts
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { MergeModel } from './mergeModel.js';
-import { GLTFExporter } from './gLTFExporter.js';
+//import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
+import { GLTFExporter } from './GLTFExporter.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -59,7 +59,7 @@ async function optimizeGltf() {
     // Загружаем GLTF с помощью three.js
     console.log('📥 Загружаем модель...');
 
-    const data = fs.readFileSync('./input/model.gltf', 'utf-8');
+    const data = fs.readFileSync(inputFile, 'utf-8');
     const gltfJson = JSON.parse(data);
 
     const loadManag = new THREE.LoadingManager(
@@ -100,7 +100,7 @@ async function optimizeGltf() {
     // Используем ваш MergeModel класс для оптимизации
     console.log('🔄 Начинаем мердж геометрий...');
     const result = MergeModel.processModelWithMerge(gltfData.scene);
-
+    //const result = { group: gltfData.scene };
     // Анализируем оптимизированную модель
     const optimizedStats = analyzeScene(result.group);
     console.log('📊 Статистика оптимизированной модели:');
@@ -108,28 +108,34 @@ async function optimizeGltf() {
     console.log(`   - Вершин: ${optimizedStats.vertexCount}`);
     console.log(`   - Линий: ${optimizedStats.lineCount}`);
 
-    // const scene = new THREE.Scene();
-    // scene.add(result.group);
-    // Экспортируем обратно в GLTF
+    const scene = new THREE.Scene();
+    scene.add(result.group);
+
     console.log('💾 Экспортируем в GLTF...');
-    const exportResult = await GLTFExporter.exportGLTF(result.group, {
-      binary: false, // Сохраняем как JSON (можно изменить на true для .glb)
-      trs: false,
-      onlyVisible: true,
+    const exporter = new GLTFExporter();
+    const exportResult = await new Promise<any>((resolve, reject) => {
+      exporter.parse(
+        scene,
+        (gltf) => {
+          console.log('✅ GLTF экспортирован');
+
+          resolve({ gltf });
+        },
+        (error) => {
+          reject(error);
+        },
+        {
+          binary: false,
+          trs: false,
+          onlyVisible: true,
+          //embedImages: false,
+        }
+      );
     });
 
     // Сохраняем результат
     console.log('📁 Сохраняем файл...');
     fs.writeFileSync(outputFile, JSON.stringify(exportResult.gltf, null, 2));
-
-    // Если есть бинарные данные, сохраняем их тоже
-    if (exportResult.buffers && exportResult.buffers.length > 0) {
-      exportResult.buffers.forEach((buffer, index) => {
-        const bufferFile = path.join(outputDir, `buffer_${index}.bin`);
-        fs.writeFileSync(bufferFile, Buffer.from(buffer));
-        console.log(`   - Бинарный файл: buffer_${index}.bin`);
-      });
-    }
 
     console.log('🎉 Оптимизация завершена!');
     console.log(`📊 Сравнение результатов:`);
