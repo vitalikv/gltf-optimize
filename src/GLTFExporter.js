@@ -597,6 +597,7 @@ class GLTFWriter {
       };
     } else {
       if (json.buffers && json.buffers.length > 0) {
+        console.log('!--- buffer');
         const arrayBuffer = await blob.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
         const base64data = 'data:' + blob.type + ';base64,' + buffer.toString('base64');
