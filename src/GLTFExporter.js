@@ -488,11 +488,11 @@ class GLTFWriter {
     this.json = {
       asset: {
         version: '2.0',
-        generator: 'THREE.GLTFExporter r' + REVISION,
+        generator: 'GLTF Optimized ' + REVISION,
       },
     };
 
-    console.log('THREE.GLTFExporter r' + REVISION);
+    console.log(this.json.asset.generator);
 
     this.cache = {
       meshes: new Map(),
