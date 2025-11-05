@@ -28,6 +28,8 @@ import {
   ImageUtils,
 } from 'three';
 
+import fs from 'fs';
+
 /**
  * The KHR_mesh_quantization extension allows these extra attribute component types
  *
@@ -490,6 +492,8 @@ class GLTFWriter {
       },
     };
 
+    console.log('THREE.GLTFExporter r' + REVISION);
+
     this.cache = {
       meshes: new Map(),
       attributes: new Map(),
@@ -527,6 +531,7 @@ class GLTFWriter {
         maxTextureSize: Infinity,
         animations: [],
         includeCustomExtensions: false,
+        bufferBaseName: 'model_buffer',
       },
       options
     );
@@ -598,11 +603,19 @@ class GLTFWriter {
     } else {
       if (json.buffers && json.buffers.length > 0) {
         console.log('!--- buffer');
-        const arrayBuffer = await blob.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const base64data = 'data:' + blob.type + ';base64,' + buffer.toString('base64');
 
-        json.buffers[0].uri = base64data;
+        const arrayBuffer = await blob.arrayBuffer();
+
+        if (arrayBuffer.byteLength > 11 * 1024 * 1024) {
+          const bufferPath = this.options.bufferBaseName + '.bin';
+          await fs.promises.writeFile('./output/' + bufferPath, Buffer.from(arrayBuffer)); // Абсолютный путь к файлу
+          json.buffers[0].uri = bufferPath; // Относительный путь к файлу
+        } else {
+          const buffer = Buffer.from(arrayBuffer);
+          const base64data = 'data:' + blob.type + ';base64,' + buffer.toString('base64');
+          json.buffers[0].uri = base64data;
+        }
+
         onDone(json);
         // const reader = new FileReader();
         // reader.readAsDataURL( blob );

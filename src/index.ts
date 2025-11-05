@@ -33,31 +33,28 @@ async function optimizeGltf() {
   try {
     console.log('🔧 Начинаем оптимизацию GLTF модели...');
 
-    const inputFile = path.join(__dirname, '../input/model.gltf');
-    const outputFile = path.join(__dirname, '../output/optimized_model.gltf');
+    // const nameFile = 'model.gltf';
+    //const nameFile = 'new ТРР-1-0006 Транспортер.gltf';
+    //const nameFile = 'ТРДДФ-1-000 - Двигатель - A.1.gltf';
+    const nameFile = 'A31A12-5325010-60^B.1^A.1.gltf';
+
+    const inputFile = path.join(__dirname, '../input/' + nameFile);
+    const outputFile = path.join(__dirname, '../output/' + nameFile);
     const outputDir = path.join(__dirname, '../output');
 
     // Проверяем входной файл
     if (!fs.existsSync(inputFile)) {
-      console.log('❌ Файл не найден:', inputFile);
-      console.log('📁 Положите ваш model.gltf в папку input/');
-      console.log('📁 Структура проекта:');
-      console.log('   project/');
-      console.log('   ├── input/');
-      console.log('   │   └── model.gltf');
-      console.log('   ├── output/');
-      console.log('   └── src/');
+      console.log(' Файл не найден:', inputFile);
       return;
     }
 
     // Создаем папку output если нет
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
-      console.log('✅ Создана папка output');
+      console.log('Создана папка output');
     }
 
-    // Загружаем GLTF с помощью three.js
-    console.log('📥 Загружаем модель...');
+    console.log(' Загружаем модель...');
 
     const data = fs.readFileSync(inputFile, 'utf-8');
     const gltfJson = JSON.parse(data);
@@ -76,34 +73,30 @@ async function optimizeGltf() {
     );
 
     const loader = new GLTFLoader(loadManag);
-    // Настраиваем DRACO декодер (опционально)
+
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath('three/examples/jsm/libs/draco/');
     loader.setDRACOLoader(dracoLoader);
 
     const gltfData = await loader.parseAsync(gltfJson, '');
-    console.log('✅ Модель загружена:');
+    console.log(' Модель загружена:');
 
-    // Загружаем модель
-    //const gltfData = await loader.loadAsync(inputFile);
-    //console.log('✅ Модель загружена:');
     console.log(`   - Сцена: ${gltfData.scene.children.length} объектов`);
     console.log(`   - Анимации: ${gltfData.animations.length}`);
 
     // Анализируем исходную модель
     const originalStats = analyzeScene(gltfData.scene);
-    console.log('📊 Статистика исходной модели:');
+    console.log(' Статистика исходной модели:');
     console.log(`   - Мешей: ${originalStats.meshCount}`);
     console.log(`   - Вершин: ${originalStats.vertexCount}`);
     console.log(`   - Линий: ${originalStats.lineCount}`);
 
-    // Используем ваш MergeModel класс для оптимизации
-    console.log('🔄 Начинаем мердж геометрий...');
+    console.log(' Начинаем мердж геометрий...');
     const result = MergeModel.processModelWithMerge(gltfData.scene);
     //const result = { group: gltfData.scene };
-    // Анализируем оптимизированную модель
+
     const optimizedStats = analyzeScene(result.group);
-    console.log('📊 Статистика оптимизированной модели:');
+    console.log(' Статистика оптимизированной модели:');
     console.log(`   - Мешей: ${optimizedStats.meshCount}`);
     console.log(`   - Вершин: ${optimizedStats.vertexCount}`);
     console.log(`   - Линий: ${optimizedStats.lineCount}`);
@@ -111,39 +104,21 @@ async function optimizeGltf() {
     const scene = new THREE.Scene();
     scene.add(result.group);
 
-    console.log('💾 Экспортируем в GLTF...');
+    console.log('Экспортируем в GLTF...');
     const exporter = new GLTFExporter();
-    const exportResult = await new Promise<any>((resolve, reject) => {
-      exporter.parse(
-        scene,
-        (gltf) => {
-          console.log('✅ GLTF экспортирован');
-
-          resolve({ gltf });
-        },
-        (error) => {
-          reject(error);
-        },
-        {
-          binary: false,
-          trs: false,
-          onlyVisible: true,
-          //embedImages: false,
-        }
-      );
-    });
+    const exportResult = await exporter.parseAsync(scene, { binary: false, trs: false, onlyVisible: true, bufferBaseName: nameFile });
 
     // Сохраняем результат
-    console.log('📁 Сохраняем файл...');
-    fs.writeFileSync(outputFile, JSON.stringify(exportResult.gltf, null, 2));
+    console.log('Сохраняем файл...');
+    fs.writeFileSync(outputFile, JSON.stringify(exportResult, null, 2));
 
-    console.log('🎉 Оптимизация завершена!');
-    console.log(`📊 Сравнение результатов:`);
+    console.log('Оптимизация завершена!');
+    console.log(`Сравнение результатов:`);
     console.log(`   - Мешей: ${originalStats.meshCount} → ${optimizedStats.meshCount} (${calculateReduction(originalStats.meshCount, optimizedStats.meshCount)})`);
     console.log(`   - Вершин: ${originalStats.vertexCount} → ${optimizedStats.vertexCount} (${calculateReduction(originalStats.vertexCount, optimizedStats.vertexCount)})`);
-    console.log(`💾 Файл сохранен: ${outputFile}`);
+    console.log(` Файл сохранен: ${outputFile}`);
   } catch (error) {
-    console.log('❌ Ошибка:', error);
+    console.log(' Ошибка:', error);
     if (error instanceof Error) {
       console.log('   - Сообщение:', error.message);
       console.log('   - Стек:', error.stack);
